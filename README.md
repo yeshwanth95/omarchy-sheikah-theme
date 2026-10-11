@@ -15,6 +15,49 @@ foreground  #afc1d5      orange       #ff9e45      red      #ff5c48
 Focused windows carry a border gradient and a matching halo, at the same 45°
 sweep, so the light stays in register with the edge emitting it.
 
+## Backgrounds
+
+Nine wallpapers ship with the theme. Click any for the full-resolution file.
+
+<table>
+  <tr>
+    <td><a href="backgrounds/01-1258416.jpg"><img src="docs/backgrounds/01-1258416.jpg" width="260" alt="01-1258416.jpg"></a></td>
+    <td><a href="backgrounds/02-wallhaven-p8rgpj_3840x2160.png"><img src="docs/backgrounds/02-wallhaven-p8rgpj_3840x2160.jpg" width="260" alt="02-wallhaven-p8rgpj_3840x2160.png"></a></td>
+    <td><a href="backgrounds/03-wallhaven-1qrlwv.jpg"><img src="docs/backgrounds/03-wallhaven-1qrlwv.jpg" width="260" alt="03-wallhaven-1qrlwv.jpg"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>01</b> &middot; the tapestry &mdash; palette source</sub></td>
+    <td align="center"><sub><b>02</b></sub></td>
+    <td align="center"><sub><b>03</b></sub></td>
+  </tr>
+  <tr>
+    <td><a href="backgrounds/04-1025644.png"><img src="docs/backgrounds/04-1025644.jpg" width="260" alt="04-1025644.png"></a></td>
+    <td><a href="backgrounds/05-wallhaven-gp29gl.jpg"><img src="docs/backgrounds/05-wallhaven-gp29gl.jpg" width="260" alt="05-wallhaven-gp29gl.jpg"></a></td>
+    <td><a href="backgrounds/06-wallhaven-dp6kdl.jpg"><img src="docs/backgrounds/06-wallhaven-dp6kdl.jpg" width="260" alt="06-wallhaven-dp6kdl.jpg"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>04</b></sub></td>
+    <td align="center"><sub><b>05</b></sub></td>
+    <td align="center"><sub><b>06</b></sub></td>
+  </tr>
+  <tr>
+    <td><a href="backgrounds/10-wallhaven-k8dyqq.png"><img src="docs/backgrounds/10-wallhaven-k8dyqq.jpg" width="260" alt="10-wallhaven-k8dyqq.png"></a></td>
+    <td><a href="backgrounds/11-wallhaven-qro7yq.png"><img src="docs/backgrounds/11-wallhaven-qro7yq.jpg" width="260" alt="11-wallhaven-qro7yq.png"></a></td>
+    <td><a href="backgrounds/13-wallhaven-zp9kej.png"><img src="docs/backgrounds/13-wallhaven-zp9kej.jpg" width="260" alt="13-wallhaven-zp9kej.png"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>10</b></sub></td>
+    <td align="center"><sub><b>11</b></sub></td>
+    <td align="center"><sub><b>13</b></sub></td>
+  </tr>
+</table>
+
+`omarchy bg next` cycles them. `01-1258416.jpg` is the Sheikah tapestry every
+color in the theme is sampled from — the palette answers to that image alone.
+The rest range wider than the palette does, from near-black slate to the warm
+reds of the Ancient murals, on the grounds that a wallpaper is allowed to be a
+picture rather than a swatch.
+
 ## Install
 
 ```bash
@@ -97,6 +140,7 @@ icons.theme        Yaru-prussiangreen-dark
 keyboard.rgb       258af5
 backgrounds/       01-1258416.jpg is the tapestry everything is sampled from
 generator/         draws procedural Sheikah wallpapers — see generator/README.md
+docs/              README thumbnails only; nothing here is read at runtime
 install.sh         the optional post-install step above
 ```
 
