@@ -1,0 +1,11 @@
+# The bar is the Slate's bezel: darker than the lit screen it frames. Modules
+# calling attention to themselves flare Guardian amber rather than red, which
+# the theme reserves for a target lock.
+[bar]
+background       = "#00060c"
+background-alpha = 1.0
+text             = "#afc1d5"
+active           = "#ff9e45"
+scale-with-font  = true
+size-horizontal  = 26
+size-vertical    = 28

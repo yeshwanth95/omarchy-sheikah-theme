@@ -1,0 +1,15 @@
+# Sheikah Slate authentication. The rune border sits cold and etched while idle,
+# charges to full glow as the passphrase is entered, and drops to Guardian red
+# on a failed reading.
+[lock]
+background       = "#00060c"
+background-alpha = 0.82
+text             = "#e9f1fc"
+placeholder      = "#597391"
+text-error       = "#ff5c48"
+border           = "#15508f #258af5 45deg"
+border-active    = "#258af5 #7ab8ff 45deg"
+border-error     = "#ff5c48"
+border-alpha     = 1.0
+selection        = "#258af5"
+selection-alpha  = 0.45

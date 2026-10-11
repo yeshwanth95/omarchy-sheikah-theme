@@ -1,0 +1,50 @@
+# Sheikah — the Sheikah Slate interface from The Legend of Zelda: Breath of the Wild.
+#
+# Every color is sampled from backgrounds/1258416.jpg, the Sheikah tapestry: a
+# near-black ground, the navy its swirls are drawn in, and the small light-blue
+# crosses stamped across it. The whole ladder sits at hue 210-215°, so the theme
+# is deliberately monochrome — the runes glow the tapestry's own light blue
+# rather than the cyan of the Slate's screen. The cyan slot keeps a paler
+# rung of that same ramp so `ls` can still tell a symlink from a directory. Warm colors are held back for the
+# way the technology signals trouble: shrine amber, Guardian red, and Malice.
+
+mode = "dark"
+
+accent = "#258af5"
+selection = "#0b346c"
+muted = "#15508f"
+
+# The tapestry's own four steps: ground, and the navy the swirls are drawn in.
+background = "#00152d"
+dark_background = "#000e1d"
+darker_background = "#00060c"
+lighter_background = "#00203f"
+
+# Carried to the tapestry's hue and lifted to hold their contrast on the navy.
+foreground = "#afc1d5"
+dark_foreground = "#597391"
+light_foreground = "#c8d6e8"
+bright_foreground = "#e9f1fc"
+
+# Focused windows run the rune at full charge: the tapestry's bright cross
+# climbing to the white-blue of a rune that has just been struck. Opaque, so
+# it reads as emitted light rather than a tinted edge. Unfocused windows stay
+# on the dim navy below, which is what makes the focused one obvious.
+hyprland_active_border = "rgba(258af5ff) rgba(bddcffff) 45deg"
+hyprland_inactive_border = "rgba(0b346caa)"
+
+red = "#ff5c48"     # Guardian target lock
+yellow = "#e8c169"  # ancient core amber
+orange = "#ff9e45"  # unlit shrine
+green = "#5fd9a8"   # stamina wheel
+cyan = "#8fc3ff"    # a paler rung: `ls` paints symlinks with this
+blue = "#258af5"    # the tapestry's bright crosses
+magenta = "#b073e6" # Malice
+brown = "#6b5445"   # slate stone
+
+bright_red = "#ff8272"
+bright_yellow = "#ffdd8f"
+bright_green = "#82edc2"
+bright_cyan = "#bddcff"
+bright_blue = "#5ca6fa"
+bright_magenta = "#ce9bf5"

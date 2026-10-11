@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# theme-set hook: let a theme carry its own Hyprland Lua and ASCII branding.
+#
+# Omarchy leaves two gaps that a theme cannot close from inside its own folder:
+#
+#   1. Branding. omarchy-screensaver and omarchy-branding-about read fixed
+#      paths under ~/.config/omarchy/branding/ and never consult the theme.
+#   2. Lua. A theme installed from a git repo has its hyprland.lua stripped at
+#      staging (is_denied_installed_file denies *.lua), because Lua from a
+#      stranger's repo is arbitrary code. The file survives in the theme's own
+#      directory, though -- only the staged copy is dropped.
+#
+# This hook closes both, for whatever theme was just set. It is theme-agnostic:
+# a theme that ships none of these files is left alone, and switching to a
+# theme without branding restores Omarchy's own art rather than stranding the
+# previous theme's logo.
+#
+# Reinstating Lua is gated by an allowlist, because that deny list exists for a
+# good reason: hyprland.lua runs as code in your Hyprland session. Only themes
+# named in
+#
+#     ~/.config/omarchy/theme-extras.allow
+#
+# get their Lua back, one name per line. A theme's own install.sh adds its name
+# there, so running that script is the act of vouching for it -- every other
+# installed theme stays denied exactly as Omarchy intended. Branding is not
+# gated: .txt art is inert and Omarchy already stages it untouched.
+
+set -uo pipefail
+
+: "${OMARCHY_PATH:=/usr/share/omarchy}"
+
+theme_name="${1:-}"
+staged="$HOME/.local/state/omarchy/current/theme"
+branding="$HOME/.config/omarchy/branding"
+
+# Where the theme's untouched files live: user themes first, then stock.
+source_dir=""
+for candidate in "$HOME/.config/omarchy/themes/$theme_name" "$OMARCHY_PATH/themes/$theme_name"; do
+  [[ -d $candidate ]] && { source_dir="$candidate"; break; }
+done
+
+# --- ASCII branding -------------------------------------------------------
+# The staged copy is enough here: .txt is not on the deny list, so it survives
+# a git-installed theme untouched.
+install_branding() {
+  local name="$1" fallback="$2"
+
+  if [[ -f $staged/$name ]]; then
+    cmp -s "$staged/$name" "$branding/$name" || cp -f "$staged/$name" "$branding/$name"
+  elif [[ -f $fallback ]]; then
+    cmp -s "$fallback" "$branding/$name" || cp -f "$fallback" "$branding/$name"
+  fi
+}
+
+mkdir -p "$branding"
+install_branding screensaver.txt "$OMARCHY_PATH/logo.txt"
+install_branding about.txt "$OMARCHY_PATH/icon.txt"
+
+# --- Hyprland Lua (the border glow) --------------------------------------
+# Restore it from the theme's own directory when staging dropped or rewrote it,
+# then reload so Hyprland re-requires omarchy.current.theme.hyprland.
+allowlist="$HOME/.config/omarchy/theme-extras.allow"
+theme_is_allowed() {
+  [[ -f $allowlist ]] || return 1
+  grep -qxF -- "$theme_name" "$allowlist"
+}
+
+if [[ -n $source_dir && -f $source_dir/hyprland.lua ]] && theme_is_allowed; then
+  if ! cmp -s "$source_dir/hyprland.lua" "$staged/hyprland.lua"; then
+    cp -f "$source_dir/hyprland.lua" "$staged/hyprland.lua"
+
+    if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null; then
+      hyprctl reload >/dev/null 2>&1
+    fi
+  fi
+fi
