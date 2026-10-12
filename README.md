@@ -113,6 +113,41 @@ To undo it:
 ./install.sh --uninstall
 ```
 
+### The menu logo (manual, and only if you want it)
+
+`assets/triforce.svg` can replace the Omarchy mark on the bar's menu button, but
+`install.sh` deliberately leaves this one alone. The button belongs to whichever
+plugin owns your menu, and there is no supported way to swap a bar slot without
+disabling that plugin — `omarchy bar` has no `remove`, and
+`omarchy plugin disable` on a menu plugin takes the menu down with it. Rather than
+have an installer perform surgery on your `shell.json`, here is the edit.
+
+If your menu is a clone (`~/.config/omarchy/plugins/<you>.menu/`), edit its
+`BarWidget.qml`. If you are on the stock `omarchy.menu`, clone it first with
+`omarchy plugin clone omarchy.menu`, which never touches `/usr/share`.
+
+Copy the logo block from this theme's own widget — the asset resolution, the
+`FileView` on `theme.name`, and the `MultiEffect` tint are all in
+`install/plugins/sheikah.workspaces/BarWidget.qml`, pointed at
+`assets/triforce.svg` instead. The three load-bearing lines on the button are:
+
+```qml
+text: "\ue900"          // keep it: WidgetButton sizes from the hidden label,
+                        // so the button stays exactly as wide as before
+labelVisible: !root.logoReady
+```
+
+plus an `Image` + `MultiEffect { colorization: 1.0; colorizationColor: button.foreground }`
+pair centred in the button, which tints the triforce to `bar.text` so it follows
+every theme the way the glyph did.
+
+**You must restart the shell afterwards**, not just save: the menu plugin is
+`keepLoaded`, and its bar widget is *not* rebuilt by the usual hot reload even
+though the log says `Local plugin changed, reloading`. Run `omarchy restart shell`.
+
+Like everything else here, it is theme-conditional — switch to another theme and
+the Omarchy mark comes back on its own.
+
 ## About that allowlist
 
 Re-enabling Lua re-opens a hole Omarchy closed on purpose, so the hook only
@@ -141,7 +176,7 @@ windows' halos never touch.
 ```
 colors.toml        the palette — single source of truth for everything generated
 hyprland.lua       border gradient + halo (needs install.sh on a cloned install)
-assets/            quest_marker.svg — the focused-workspace indicator
+assets/            quest_marker.svg (workspace indicator), triforce.svg (menu logo)
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
 shell.bar.toml     the bar, as the Slate's bezel
