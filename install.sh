@@ -27,9 +27,12 @@ set -euo pipefail
 
 THEME_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 THEME_NAME="$(basename "$THEME_DIR")"
-HOOK_NAME="omarchy-theme-extras"
+HOOK_NAME="sheikah-theme-extras"
 HOOK_DIR="$HOME/.config/omarchy/hooks/theme-set.d"
 HOOK_DEST="$HOOK_DIR/$HOOK_NAME"
+PLUGIN_ID="sheikah.workspaces"
+PLUGIN_SRC="$THEME_DIR/install/plugins/$PLUGIN_ID"
+PLUGIN_DEST="$HOME/.config/omarchy/plugins/$PLUGIN_ID"
 
 say()  { printf '  %s\n' "$*"; }
 fail() { printf '\n  Error: %s\n\n' "$*" >&2; exit 1; }
@@ -49,6 +52,15 @@ if [[ ${1:-} == "--uninstall" ]]; then
     grep -vxF -- "$THEME_NAME" "$ALLOWLIST" >"$ALLOWLIST.tmp" || true
     mv "$ALLOWLIST.tmp" "$ALLOWLIST"
     say "De-allowlisted $THEME_NAME"
+  fi
+  # Disable before removing. The restore that puts omarchy.workspaces back in
+  # the same layout slot reads clonedFrom out of the manifest, so deleting the
+  # directory first would strand a dead entry in shell.json and leave the bar
+  # with no workspace indicator at all.
+  if [[ -d $PLUGIN_DEST ]]; then
+    omarchy plugin disable "$PLUGIN_ID" >/dev/null 2>&1 || true
+    rm -rf "$PLUGIN_DEST"
+    say "Restored built-in workspaces widget"
   fi
   say "Branding art is left as-is. Restore Omarchy's with:"
   say "    omarchy branding screensaver reset && omarchy branding about reset"
@@ -76,6 +88,51 @@ else
   printf '%s\n' "$THEME_NAME" >>"$ALLOWLIST"
   say "Allowlisted    → $ALLOWLIST ($THEME_NAME)"
 fi
+
+# --- the workspace quest marker -------------------------------------------
+# Omarchy reserves the omarchy.* plugin namespace and rejects any third-party
+# plugin that collides with a built-in, so the marker cannot be a patch to
+# omarchy.workspaces. It ships instead as a stand-in bar widget declaring
+# clonedFrom: omarchy.workspaces -- Omarchy then hands it the built-in's slot
+# on enable, and hands the slot back on disable. The widget decides at runtime
+# whether the active theme ships assets/quest_marker.svg and draws the stock
+# Nerd Font dot when it does not, so it is safe under any theme.
+install_marker_widget() {
+  [[ -d $PLUGIN_SRC ]] || { say "No marker widget in this checkout; skipping."; return 0; }
+  command -v omarchy-plugin-enable >/dev/null 2>&1 \
+    || { say "This Omarchy has no shell plugins; skipping marker widget."; return 0; }
+
+  # Copied, never symlinked: omarchy plugin validate refuses a symlink
+  # anywhere inside a plugin folder.
+  mkdir -p "$PLUGIN_DEST"
+  install -m 644 "$PLUGIN_SRC/manifest.json" "$PLUGIN_DEST/manifest.json"
+  install -m 644 "$PLUGIN_SRC/BarWidget.qml" "$PLUGIN_DEST/BarWidget.qml"
+  omarchy plugin validate "$PLUGIN_DEST" >/dev/null \
+    || fail "the marker widget failed omarchy plugin validate"
+  say "Installed widget → $PLUGIN_DEST"
+
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    omarchy plugin list 2>/dev/null | grep -q "$PLUGIN_ID" && break
+    sleep 0.2
+  done
+
+  if ! omarchy plugin list 2>/dev/null | grep -q "$PLUGIN_ID"; then
+    say "Shell has not picked it up yet; run 'omarchy restart shell'."
+    return 0
+  fi
+
+  if omarchy plugin list 2>/dev/null | grep -qE "^[^ ]*$PLUGIN_ID.*enabled"; then
+    say "Widget already on  → $PLUGIN_ID"
+  else
+    omarchy plugin enable "$PLUGIN_ID" >/dev/null 2>&1 || true
+    say "Enabled widget  → $PLUGIN_ID (took the omarchy.workspaces slot)"
+  fi
+}
+
+install_marker_widget
 
 # --- apply now ------------------------------------------------------------
 # The hook normally fires from omarchy-theme-set. Run it directly so the

@@ -86,12 +86,21 @@ deliberately will not let a theme installed from a git repo supply them:
   and never consult the active theme, so shipping the art is not enough to
   apply it.
 
-`install.sh` will enable both of these. Everything it changes is inside your home directory — no `sudo`, nothing under `/usr`:
+- **The workspace quest marker.** The bar's focused-workspace indicator is a Nerd
+  Font glyph, and nothing about it is configurable without QML. Omarchy also
+  reserves the whole `omarchy.*` plugin namespace, so the marker ships as a
+  stand-in bar widget declaring `clonedFrom: omarchy.workspaces` — Omarchy hands
+  it the built-in's slot on enable and hands the slot straight back on disable.
+  It decides *at runtime* whether the active theme ships
+  `assets/quest_marker.svg`, so under any other theme you get the stock dot.
+
+`install.sh` will enable all three of these. Everything it changes is inside your home directory — no `sudo`, nothing under `/usr`:
 
 | path | what it is |
 |---|---|
-| `~/.config/omarchy/hooks/theme-set.d/omarchy-theme-extras` | a `theme-set` hook |
+| `~/.config/omarchy/hooks/theme-set.d/sheikah-theme-extras` | a `theme-set` hook |
 | `~/.config/omarchy/theme-extras.allow` | adds `sheikah` to the Lua allowlist |
+| `~/.config/omarchy/plugins/sheikah.workspaces/` | the workspace bar widget |
 
 The hook runs on every theme change from then on. It is theme-agnostic: it
 leaves themes that ship none of these files alone, and when you switch to a
@@ -132,6 +141,7 @@ windows' halos never touch.
 ```
 colors.toml        the palette — single source of truth for everything generated
 hyprland.lua       border gradient + halo (needs install.sh on a cloned install)
+assets/            quest_marker.svg — the focused-workspace indicator
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
 shell.bar.toml     the bar, as the Slate's bezel
@@ -142,6 +152,7 @@ backgrounds/       01-1258416.jpg is the tapestry everything is sampled from
 generator/         draws procedural Sheikah wallpapers — see generator/README.md
 docs/              README thumbnails only; nothing here is read at runtime
 install.sh         the optional post-install step above
+install/           what it installs: the hook and the bar widget
 ```
 
 `alacritty.toml`, `foot.ini`, `neovim.lua` and `vscode.json` are intentionally
