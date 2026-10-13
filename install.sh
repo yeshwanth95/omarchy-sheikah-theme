@@ -13,6 +13,12 @@
 #
 #     ./install.sh              enable
 #     ./install.sh --uninstall  undo
+#     ./install.sh --with-lock  also replace the lock screen (see below)
+#
+# The lock screen is opt-in. Everything else here is cosmetic and reversible;
+# the lock screen is the one thing that, if it broke, would keep you out of
+# your own machine. It is not a reasonable side effect of installing a theme,
+# so it only happens when you ask for it by name.
 #
 # What it changes, all inside your home directory -- nothing system-wide, no
 # sudo, and nothing under /usr:
@@ -33,6 +39,12 @@ HOOK_DEST="$HOOK_DIR/$HOOK_NAME"
 PLUGIN_ID="sheikah.workspaces"
 PLUGIN_SRC="$THEME_DIR/install/plugins/$PLUGIN_ID"
 PLUGIN_DEST="$HOME/.config/omarchy/plugins/$PLUGIN_ID"
+LOCK_ID="sheikah.lock"
+LOCK_DEST="$HOME/.config/omarchy/plugins/$LOCK_ID"
+LOCK_SRC="${OMARCHY_PATH:-/usr/share/omarchy}/shell/plugins/lock"
+LOCK_PATCH="$THEME_DIR/install/lock-frame"
+WITH_LOCK=0
+[[ ${1:-} == "--with-lock" ]] && WITH_LOCK=1
 
 say()  { printf '  %s\n' "$*"; }
 fail() { printf '\n  Error: %s\n\n' "$*" >&2; exit 1; }
@@ -61,6 +73,15 @@ if [[ ${1:-} == "--uninstall" ]]; then
     omarchy plugin disable "$PLUGIN_ID" >/dev/null 2>&1 || true
     rm -rf "$PLUGIN_DEST"
     say "Restored built-in workspaces widget"
+  fi
+  # Disable before removing, same reason as above and more sharply: the restore
+  # that puts omarchy.lock back reads clonedFrom out of this manifest, so
+  # deleting the directory first strands omarchy.lock in disabledPlugins and
+  # leaves the session with NO lock plugin at all.
+  if [[ -d $LOCK_DEST ]]; then
+    omarchy plugin disable "$LOCK_ID" >/dev/null 2>&1 || true
+    rm -rf "$LOCK_DEST"
+    say "Restored built-in lock screen"
   fi
   say "Branding art is left as-is. Restore Omarchy's with:"
   say "    omarchy branding screensaver reset && omarchy branding about reset"
@@ -133,6 +154,100 @@ install_marker_widget() {
 }
 
 install_marker_widget
+
+# --- the lock screen frame (opt-in) ---------------------------------------
+# Built from the running Omarchy's own lock plugin, never from a copy frozen
+# into this repo. Service.qml carries the PAM flow and the stranded-lock
+# recovery; shipping a stale one would be a broken lock screen on any Omarchy
+# but the exact version this theme was written against. Only LockView.qml is
+# patched, and only by inserting two blocks at anchors that are verified unique
+# first -- if upstream has moved, we bail and leave the stock lock alone.
+insert_before() {
+  local anchor="$1" snippet="$2" target="$3"
+  awk -v anchor="$anchor" -v snippet="$snippet" '
+    $0 == anchor { while ((getline line < snippet) > 0) print line; close(snippet) }
+    { print }
+  ' "$target" >"$target.new" && mv "$target.new" "$target"
+}
+
+install_lock_frame() {
+  local anchor_props="  signal submitPassword(string password)"
+  local anchor_overlay="    BorderSurface {"
+
+  [[ -d $LOCK_SRC ]] || { say "This Omarchy has no lock plugin; skipping frame."; return 0; }
+  [[ -f $THEME_DIR/assets/sheikah_frame.png ]] || { say "No baked frame in this checkout; skipping."; return 0; }
+  command -v omarchy-plugin-enable >/dev/null 2>&1 || { say "No shell plugins; skipping lock frame."; return 0; }
+  command -v jq >/dev/null 2>&1 || { say "jq not found; skipping lock frame."; return 0; }
+
+  local stage
+  stage=$(mktemp -d "$HOME/.config/omarchy/plugins/.sheikah-lock.XXXXXX")
+  install -m 644 "$LOCK_SRC/Service.qml" "$LOCK_SRC/LockView.qml" "$stage/"
+
+  # Both anchors must occur exactly once, or upstream has changed underneath
+  # us and a blind insert could produce a lock screen with no password field.
+  local a b
+  a=$(grep -cxF "$anchor_props"   "$stage/LockView.qml" || true)
+  b=$(grep -cxF "$anchor_overlay" "$stage/LockView.qml" || true)
+  if [[ $a != 1 || $b != 1 ]]; then
+    rm -rf "$stage"
+    say "This Omarchy's LockView.qml is not shaped as expected ($a/$b anchors);"
+    say "leaving the stock lock screen untouched."
+    return 0
+  fi
+
+  insert_before "$anchor_props"   "$LOCK_PATCH/properties.qml" "$stage/LockView.qml"
+  insert_before "$anchor_overlay" "$LOCK_PATCH/overlay.qml"    "$stage/LockView.qml"
+
+  jq --arg id "$LOCK_ID" --arg name "Sheikah Lock Screen" '
+      .id = $id | .name = $name
+      | .omarchy = ((.omarchy // {}) + { clonedFrom: "omarchy.lock" })
+    ' "$LOCK_SRC/manifest.json" >"$stage/manifest.json"
+
+  # What this was built from, so a later Omarchy upgrade is detectable:
+  #   (cd /usr/share/omarchy/shell/plugins/lock && sha256sum -c ~/.config/omarchy/plugins/sheikah.lock/UPSTREAM)
+  (cd "$LOCK_SRC" && sha256sum manifest.json Service.qml LockView.qml) >"$stage/UPSTREAM"
+
+  rm -rf "$LOCK_DEST"
+  mv "$stage" "$LOCK_DEST"
+  chmod 755 "$LOCK_DEST"; chmod 644 "$LOCK_DEST"/*
+
+  omarchy plugin validate "$LOCK_DEST" >/dev/null \
+    || { rm -rf "$LOCK_DEST"; fail "the lock frame clone failed omarchy plugin validate"; }
+  say "Installed lock  → $LOCK_DEST"
+
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    omarchy plugin list 2>/dev/null | grep -q "$LOCK_ID" && break
+    sleep 0.2
+  done
+  if ! omarchy plugin list 2>/dev/null | grep -q "$LOCK_ID"; then
+    say "Shell has not picked the lock up; run 'omarchy restart shell'."
+    return 0
+  fi
+
+  if omarchy plugin list 2>/dev/null | grep -qE "^[^ ]*$LOCK_ID.*enabled"; then
+    say "Lock frame already on → $LOCK_ID"
+  else
+    # Takes omarchy.lock's place: Omarchy adds the source to disabledPlugins
+    # for a non-widget clone, because two live WlSessionLock clients would
+    # fight over the session.
+    omarchy plugin enable "$LOCK_ID" >/dev/null 2>&1 || true
+    say "Enabled lock    → $LOCK_ID (replaced omarchy.lock)"
+  fi
+
+  say ""
+  say "The lock screen needs a shell restart to take effect:"
+  say "    omarchy restart shell"
+  say "Then preview it WITHOUT locking yourself out:"
+  say "    omarchy-shell lock preview      (click anywhere to dismiss)"
+}
+
+if (( WITH_LOCK )); then
+  install_lock_frame
+else
+  say "Lock screen frame not installed (opt in with --with-lock)."
+fi
 
 # --- apply now ------------------------------------------------------------
 # The hook normally fires from omarchy-theme-set. Run it directly so the

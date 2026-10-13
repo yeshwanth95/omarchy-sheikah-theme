@@ -13,3 +13,8 @@ border-error     = "#ff5c48"
 border-alpha     = 1.0
 selection        = "#258af5"
 selection-alpha  = 0.45
+
+# The Slate's bezel, drawn over the blurred wallpaper and under the passphrase
+# field. Relative to the theme directory. Only a theme that sets this gets a
+# frame, so the patched lock screen is a no-op under every other theme.
+frame            = "assets/sheikah_frame.png"

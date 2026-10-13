@@ -148,6 +148,83 @@ though the log says `Local plugin changed, reloading`. Run `omarchy restart shel
 Like everything else here, it is theme-conditional — switch to another theme and
 the Omarchy mark comes back on its own.
 
+### The lock screen frame (opt-in)
+
+`assets/sheikah_frame.png` can be drawn over the lock screen's blurred
+wallpaper, under the passphrase field. It is **opt-in**, because unlike
+everything else here a broken lock screen keeps you out of your own machine:
+
+```bash
+./install.sh --with-lock
+omarchy restart shell          # the lock service is keepLoaded; edits need this
+omarchy-shell lock preview     # SAFE: renders the real view, takes no session lock
+```
+
+`lock preview` is the way to check it. It builds the same `LockView` in an
+ordinary layer-shell window without engaging `WlSessionLock`, so it cannot lock
+you out. Click anywhere to dismiss. Preview lands on one monitor only; the real
+lock draws per-screen.
+
+Omarchy's lock screen cannot be themed from a theme file — none of the `[lock]`
+keys accept an image — so this clones `omarchy.lock` into
+`~/.config/omarchy/plugins/sheikah.lock/` and patches one file. Two things keep
+that honest:
+
+- The clone is **built from your own machine's lock plugin at install time**,
+  never from a copy frozen into this repo. `Service.qml` carries the PAM flow,
+  and shipping a stale one would be a broken login on any Omarchy but the
+  version this theme was written against. It is copied byte-for-byte; only
+  `LockView.qml` is patched, purely by insertion, at two anchors that are
+  checked to be unique first. If upstream has moved, the installer bails and
+  leaves your stock lock alone.
+- `install/lock-frame/UPSTREAM` records the hashes it was built from, so after
+  an Omarchy upgrade you can check for drift:
+
+  ```bash
+  (cd /usr/share/omarchy/shell/plugins/lock && \
+     sha256sum -c ~/.config/omarchy/plugins/sheikah.lock/UPSTREAM)
+  ```
+
+  If it fails, re-run `./install.sh --with-lock` to rebuild against the new one.
+
+`sheikah_frame_art.svg` is the editable master; `sheikah_frame.png` is what the
+lock actually loads. The SVG is 4.25 MB (99.8% of it one embedded 3840x2160
+raster) and takes 0.72s to rasterize, against 0.064s for the baked PNG. Rebuild
+it after editing the master:
+
+```bash
+rsvg-convert -w 4102 -h 2382 assets/sheikah_frame_art.svg \
+  | magick png:- -alpha on -fuzz 15% -trim +repage \
+      -resize '3840x2160!' assets/sheikah_frame.png
+```
+
+The trim is load-bearing, not tidying. The artwork is inset **twice**: the SVG's
+`2051x1191` canvas holds the frame in an inner `1920x1080` rect at `(71,57)` —
+padding that exists as bleed room for the two Gaussian-blur glow filters — and
+the embedded raster has a further ~8.5% padding of its own, top and bottom.
+Render the canvas as-is and those add up to a visible margin on all four sides
+instead of a bezel. `-fuzz 15%` trims the faint outer glow but keeps the solid
+stone, landing the art flush (measured: L 0.0% / T 1.0% / R 0.5% / B 0.7%).
+
+`-resize '3840x2160!'` — the `!` forces the non-uniform scale, since the trimmed
+art is not 16:9 and the lock stretches it to the screen anyway.
+
+**It is theme-conditional.** The frame is opted into by one key in
+`shell.lock.toml`:
+
+```toml
+frame = "assets/sheikah_frame.png"
+```
+
+Omarchy splices `shell.*.toml` sections into the staged `shell.toml` verbatim
+and keeps keys it does not recognise, so any theme can set this and themes that
+do not set it get the stock lock screen. Switching themes swaps the frame in and
+out live, with no shell restart.
+
+To undo: `./install.sh --uninstall` disables the clone (which restores
+`omarchy.lock`) before removing it. That order matters — deleting first would
+strand you with no lock plugin at all.
+
 ## About that allowlist
 
 Re-enabling Lua re-opens a hole Omarchy closed on purpose, so the hook only
@@ -179,7 +256,8 @@ windows' halos never touch.
 ```
 colors.toml        the palette — single source of truth for everything generated
 hyprland.lua       border gradient + halo (needs install.sh on a cloned install)
-assets/            quest_marker.svg (workspace indicator), triforce.svg (menu logo)
+assets/            quest_marker.svg (workspace indicator), triforce.svg (menu logo),
+                   sheikah_frame_art.svg (master) + sheikah_frame.png (lock frame)
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
 shell.bar.toml     the bar, as the Slate's bezel
