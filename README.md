@@ -161,9 +161,12 @@ two border colors, two halo colors, and a `decoration.shadow` block. You can sim
 
 ## How the glow works
 
-Hyprland has no glow primitive. This is `decoration:shadow` with its offset
-left at the default `[0, 0]`: instead of falling to one side the shadow spreads
-evenly on all four edges, which reads as light coming off the border. The halo
+Hyprland has an inner glow (`decoration:glow`) but no outer one, and this halo
+sits outside the border. The tool for that is `decoration:shadow`, left at its
+default `[0, 0]` offset: with no offset the shadow does not fall to one side but
+spreads evenly on all four edges, which reads as light coming off the border.
+That is the native path, not a workaround — `shadow` is a first-class decoration
+and `[0, 0]` is its documented default. The halo
 runs a rung hotter than the border and ends near white, so the falloff goes
 charged edge → blue bloom → navy. That chromatic step is what makes it read as
 emitted light rather than a thicker blue outline.

@@ -1,9 +1,12 @@
 -- Sheikah — window borders and their halo.
 --
--- Hyprland has no glow primitive. This is decoration:shadow with its offset
--- left at the default [0, 0]: instead of falling to one side the shadow
--- spreads evenly on all four edges, which reads as light coming off the
--- border. The halo carries the same 45° sweep as the border itself, so the
+-- Hyprland has an inner glow (decoration:glow, CHyprInnerGlowDecoration) but no
+-- outer one, and this halo sits outside the border. The tool for that is
+-- decoration:shadow, left at its default [0, 0] offset: with no offset the
+-- shadow does not fall to one side but spreads evenly on all four edges, which
+-- reads as light coming off the border. That is the native path rather than a
+-- workaround -- shadow is a first-class decoration and [0, 0] is its documented
+-- default. The halo carries the same 45° sweep as the border itself, so the
 -- light and the edge emitting it stay in register around the whole perimeter.
 --
 -- Colors are literal here because a theme-supplied hyprland.lua is not a .tpl
