@@ -1,0 +1,52 @@
+# Sheikah Slate menu. The selected row is the Slate's active frame: it drops to
+# the near-black of the tapestry ground, takes the charged edge the focused
+# window wears, and carries a halo of the same light.
+#
+# A theme override replaces its whole section rather than merging into it
+# (omarchy-theme-set-templates: apply_shell_section_override drops the
+# generated lines), so every [menu] key has to be restated here, not just the
+# ones that change.
+[menu]
+background                = "#00152d"
+background-alpha          = 1.0
+text                      = "#afc1d5"
+border                    = "hyprland.active-border-foreground"
+border-alpha              = 1.0
+scrim                     = "#00152d"
+scrim-alpha               = 0.5
+
+# The row the cursor is on. Stock Omarchy lifts it a little off the card with a
+# translucent wash of the foreground; the Slate does the opposite and sinks it
+# to the ground colour, so the bright edge around it is the thing that reads.
+selected-background       = "#00060c"
+selected-background-alpha = 0.9
+selected-text             = "#e9f1fc"
+
+# The bright end of the focused window's border, at full strength. Stock holds
+# this at 0.25, which is why the stock row has no visible outline.
+selected-border           = "#bddcff"
+selected-border-alpha     = 1.0
+selected-border-width     = 1
+
+# --- read by the menu plugin, not by Omarchy -------------------------------
+# Omarchy has no tokens for these; Color.parseShell keeps any key it does not
+# recognise, so they ride along in Color.shellValues and the patched Menu.qml
+# picks them up. A theme that omits them gets the stock flat row, which is what
+# every other theme does.
+
+# Leg length in px of the corner brackets. 0 or absent turns them off.
+selected-corners          = 8
+
+# Rows the cursor is not on. Omarchy leaves these with no outline at all; the
+# Slate gives them a dim one so the list reads as a stack of slots rather than
+# floating text. Border.surfaceSpec resolves any token name, so this needs no
+# parsing on the QML side -- absent means no idle outline.
+row-border                = "#15508f"
+row-border-alpha          = 0.55
+row-border-width          = 1
+
+# The halo. Hyprland's window halo runs the same accent a rung hotter than the
+# border and lets it fall off into the dark; this is that, in two dimensions.
+selected-glow             = "#258af5"
+selected-glow-alpha       = 0.70
+selected-glow-blur        = 14

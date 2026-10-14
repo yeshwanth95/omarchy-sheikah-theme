@@ -148,6 +148,76 @@ though the log says `Local plugin changed, reloading`. Run `omarchy restart shel
 Like everything else here, it is theme-conditional — switch to another theme and
 the Omarchy mark comes back on its own.
 
+### The active menu row (half ships, half is a manual edit)
+
+The row under the cursor in the Omarchy menu gets the Slate's active frame: it
+sinks to the tapestry ground colour, takes the bright edge of a focused window,
+grows a bracket in each corner, and throws a halo the way the window borders do.
+`assets/menu_item_active.svg` is the design reference the numbers came from.
+
+**The colours ship with the theme and need no edit at all.** `shell.menu.toml`
+restates the whole `[menu]` section — a theme override replaces its section
+rather than merging into it, so every key has to be present, not just the ones
+that change — and turns on tokens Omarchy already understands:
+
+```toml
+selected-background       = "#00060c"   # was a translucent wash of the foreground
+selected-background-alpha = 0.9
+selected-border           = "#bddcff"
+selected-border-alpha     = 1.0         # Omarchy's default is 0.0, i.e. invisible
+selected-border-width     = 1
+```
+
+That alone gives you the fill and the outline. The brackets and the halo need a
+patched menu, and are driven by four keys Omarchy has no tokens for:
+
+```toml
+selected-corners          = 8           # bracket leg in px; 0 or absent = off
+selected-glow             = "#258af5"
+selected-glow-alpha       = 0.70
+selected-glow-blur        = 14
+row-border                = "#15508f"   # the dim outline on every other row
+row-border-alpha          = 0.55
+row-border-width          = 1
+```
+
+`Color.parseShell` keeps any key it does not recognise, so these ride along in
+`Color.shellValues` with no Omarchy change — the same trick `shell.lock.toml`
+uses for its frame. Colours must be quoted: an unquoted `#` starts a comment.
+
+The patch itself goes in your menu plugin's `Menu.qml`, same caveat as the logo
+above — the menu belongs to whichever plugin owns it, so an installer has no
+business rewriting your `shell.json`. In the row delegate:
+
+- a `Loader` at `z: -1` holding a hidden `Rectangle` plus a `MultiEffect` with
+  `shadowEnabled` and **both offsets at zero**, so the shadow spreads evenly
+  instead of falling to one side — the same reasoning as the window halo in
+  `hyprland.lua`;
+- a `Repeater` of four `Shape` items for the brackets, one path rotated
+  `0/90/270/180` about its own centre;
+- `borderSpec` on idle rows pointed at `row-border` instead of `Border.none()`.
+
+Three things are easy to get wrong, all of them found the hard way:
+
+- **Do not use `layer.effect` for the glow.** `MultiEffect` only honours
+  `autoPaddingEnabled` when it has its own `source`; as a layer effect it
+  inherits the row's geometry and clips the halo away entirely. Routing the row
+  through a layer also costs you the border — it drops from `#bddcff` to about
+  76% brightness.
+- **`ListView` overwrites a delegate's `x`.** Anchor with
+  `anchors.horizontalCenter` instead, or the row slides to the clip edge and the
+  halo is sheared off left and right.
+- The list is widened into the card's padding by the glow's reach and given back
+  to each row, so the visible row keeps its width. Row *heights* stay untouched,
+  which is what keeps the fold maths honest.
+
+**Restart the shell afterwards** — `omarchy restart shell`. As with the logo, the
+menu plugin is `keepLoaded` and a hot reload will not rebuild it.
+
+Theme-conditional like everything else: a theme that sets none of those keys
+renders the stock flat row, the `Loader`s never instantiate, and switching away
+reverts with no restart.
+
 ### The lock screen frame (opt-in)
 
 `assets/sheikah_frame.png` can be drawn over the lock screen's blurred
@@ -257,11 +327,13 @@ windows' halos never touch.
 colors.toml        the palette — single source of truth for everything generated
 hyprland.lua       border gradient + halo (needs install.sh on a cloned install)
 assets/            quest_marker.svg (workspace indicator), triforce.svg (menu logo),
-                   sheikah_frame_art.svg (master) + sheikah_frame.png (lock frame)
+                   sheikah_frame_art.svg (master) + sheikah_frame.png (lock frame),
+                   menu_item_active.svg (design reference for the active menu row)
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
 shell.bar.toml     the bar, as the Slate's bezel
 shell.lock.toml    the lock screen
+shell.menu.toml    the menu, and the active row's frame
 icons.theme        Yaru-prussiangreen-dark
 keyboard.rgb       258af5
 backgrounds/       01-1258416.jpg is the tapestry everything is sampled from
