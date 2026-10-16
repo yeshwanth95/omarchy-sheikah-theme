@@ -50,3 +50,18 @@ row-border-width          = 1
 selected-glow             = "#258af5"
 selected-glow-alpha       = 0.70
 selected-glow-blur        = 14
+
+# The card grows from its own centre when the menu opens and shrinks back to it
+# when it closes. Hyprland is told not to animate this surface at all
+# (hypr/apps/omarchy-shell.lua puts omarchy-menu in a no_anim layer rule,
+# because panels are expected to carry their own QML transition), so without
+# these the menu appears and disappears on a single frame.
+#
+# 140ms / OutCubic is the shell's own house timing -- the same literal sits in
+# PopupCard.qml, KeyboardPanel.qml, PanelSlider.qml and WidgetButton.qml -- so
+# the menu moves like every other Quickshell surface. 0.87 is Hyprland's own
+# grow distance for a window opening ("popin 87%" in looknfeel.lua), which puts
+# the menu and the windows under it on the same footing.
+open-duration             = 140
+# Scale the card starts from and returns to. 1.0 means fade with no scale.
+open-scale                = 0.87

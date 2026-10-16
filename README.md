@@ -218,6 +218,60 @@ Theme-conditional like everything else: a theme that sets none of those keys
 renders the stock flat row, the `Loader`s never instantiate, and switching away
 reverts with no restart.
 
+### The menu opening and closing (same split again)
+
+Stock, the menu appears and disappears on a single frame. That is not an
+oversight in Hyprland's config so much as a gap: `omarchy-menu` sits in a
+`no_anim` layer rule whose comment says panels are expected to carry their own
+QML transition, and the menu is the one surface in that list that never got one.
+So the compositor stays out of the way and nothing takes its place.
+
+Two more keys in the same `[menu]` section give the card a grow from its own
+centre on the way in and a shrink back to it on the way out, with the scrim
+fading on the same clock:
+
+```toml
+open-duration             = 140   # ms, both directions. 0 or absent = off
+open-scale                = 0.87  # scale the card starts from. 1.0 = fade only
+```
+
+140ms / `OutCubic` is the shell's own house timing — the identical literal sits
+in `PopupCard.qml`, `KeyboardPanel.qml`, `PanelSlider.qml` and
+`WidgetButton.qml` — so the menu moves like every other Quickshell surface.
+0.87 is Hyprland's own grow distance for a window opening (`popin 87%` in
+`looknfeel.lua`), which puts the menu and the windows under it on the same
+footing.
+
+The QML half is small, and all of it leans on one fact: the menu's layer surface
+is already full-screen with the card laid out inside it, so scaling the card
+needs no surface resize at all, and `BorderSurface` is a `Rectangle`, so its
+`transformOrigin` is `Item.Center` already. In the `PanelWindow`:
+
+- a `shown` property for the *logical* open (`opened && rowsLoaded`), and
+  `visible: shown || card.opacity > 0` so the surface outlives the logical close
+  by the length of the shrink — the `PopupCard.qml` idiom;
+- `opacity` and `scale` on the card, each with a `Behavior` gated on whether the
+  theme asked for an animation at all;
+- **keyboard focus and the input mask follow `shown`, never `visible`.** An
+  exclusive grab held through the shrink locks the keyboard out for its
+  duration, and an app the menu just launched comes up behind a surface that
+  still owns input. `KeyboardPanel.qml` has this lesson written in a comment;
+  it is the one thing here you cannot skip.
+
+Two subtler ones, both only visible once the card outlives the close:
+
+- **Unfreeze the card's top line on the way in, not on the way out.** Reopening
+  mid-shrink never lowers `visible`, so a reset hung off that is skipped and the
+  new menu inherits the last one's frozen top.
+- **Do not clear the filter in the close paths.** It used to be invisible
+  because the surface vanished on the same frame; now the rows and the prompt
+  line are seen reverting to the unfiltered menu on the way out. Clear it when
+  the surface actually unmaps — both open paths clear it themselves anyway.
+
+Theme-conditional like the rest: with neither key set, the `Behavior`s stay
+disabled, `visible` collapses back to `shown`, and the surface unmaps on the
+same frame it always did.
+
 ### The lock screen frame (opt-in)
 
 `assets/sheikah_frame.png` can be drawn over the lock screen's blurred
