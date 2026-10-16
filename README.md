@@ -291,16 +291,22 @@ lock draws per-screen.
 
 Omarchy's lock screen cannot be themed from a theme file — none of the `[lock]`
 keys accept an image — so this clones `omarchy.lock` into
-`~/.config/omarchy/plugins/sheikah.lock/` and patches one file. Two things keep
-that honest:
+`~/.config/omarchy/plugins/sheikah.lock/` and patches it. Two things keep that
+honest:
 
 - The clone is **built from your own machine's lock plugin at install time**,
   never from a copy frozen into this repo. `Service.qml` carries the PAM flow,
   and shipping a stale one would be a broken login on any Omarchy but the
-  version this theme was written against. It is copied byte-for-byte; only
-  `LockView.qml` is patched, purely by insertion, at two anchors that are
-  checked to be unique first. If upstream has moved, the installer bails and
-  leaves your stock lock alone.
+  version this theme was written against.
+
+  Every edit is anchored on a line checked to occur **exactly once** first, and
+  an edit whose anchor has moved simply does not happen. Most are inserts.
+  Two are whole-line replacements — a sharper tool than an insert, so each is
+  gated on its own rather than sharing a gate with anything else. **No edit
+  touches the authentication code.** The stages are independent: if the view
+  has been reshaped upstream you get the stock lock screen; if only
+  `Service.qml` has moved you still get the frame and the fade-in, and lose
+  only the unlock fade.
 - `install/lock-frame/UPSTREAM` records the hashes it was built from, so after
   an Omarchy upgrade you can check for drift:
 
@@ -339,6 +345,69 @@ art is not 16:9 and the lock stretches it to the screen anyway.
 ```toml
 frame = "assets/sheikah_frame.png"
 ```
+
+### Fading the lock in and out
+
+Stock, the lock screen appears and disappears on a single frame. Nothing is
+going to do that for you: Hyprland has **no animation leaf for a session lock**
+at all, and an `ext-session-lock` surface is not a layer surface, so no
+`layer_rule` can reach it either. One more key turns on a fade in both
+directions:
+
+```toml
+fade-duration = 140   # ms. 0 or absent = the stock instant lock
+```
+
+It fades against nothing, which is the trick that makes it cheap:
+`WlSessionLockSurface` is set to `Color.background` and the view's own first
+child is an opaque `Rectangle` of that same colour, so putting `opacity` on the
+view lifts the wallpaper, the frame and the passphrase field up out of a
+backdrop that never itself changes. A true cross-fade with your desktop is not
+on offer — `ext-session-lock-v1` requires the compositor to stop presenting
+client content, so Hyprland composites the lock against its own backdrop and
+there is nothing behind to dissolve into.
+
+**The reveal waits for the wallpaper.** The blurred background takes about
+400ms to decode here, which lands squarely mid-fade; without the wait the view
+finishes rising on a bare colour and the wallpaper then appears underneath it,
+which reads as a fault rather than a fade. The wait is capped at 700ms so a
+slow or missing image costs a fixed delay instead of holding the passphrase
+field back for good.
+
+**The way out is the awkward direction.** `WlSessionLock` destroys its surfaces
+the moment `locked` goes false, and the surface's own `visible` is read-only —
+there is no `visible: open || opacity > 0` escape the way there is for an
+ordinary panel. So the release has to be held back, and the only place to do
+that is `Service.qml`, which is why that file stopped being verbatim:
+
+```diff
+-    sessionLock.locked = false
++    root.releaseSessionLock()
+```
+
+That line sits strictly downstream of the authentication decision —
+`finishUnlock()` is reached only from the two PAM success paths, both behind
+`PamResult.Success`. It changes *when* a lock is released, never *whether* it
+should be. Three things keep it safe:
+
+- **A `Timer` is the authority, never the animation.** It fires and releases
+  whether or not anything on screen finished moving, so a stalled fade cannot
+  keep you locked out.
+- **The duration is capped at 1000ms** in the QML. On this side it is time the
+  session stays locked after a correct password, so a theme does not get to
+  make it unbounded.
+- **A lock arriving inside the fade window wins outright.** Without that guard
+  the pending timer would fire against a session that had meanwhile been locked
+  again and drop the lock you just asked for. It is guarded twice: the new lock
+  cancels the timer, and the timer re-checks before releasing.
+
+If it ever does go wrong, `misc:allow_session_lock_restore` is on by default in
+Omarchy, so `omarchy restart shell` from a TTY recovers a stuck lock.
+
+While you are in there, the installer also carries one unrelated local
+preference: the lock screen's blank delay, upstream's 5s, is set to 10s. It is
+gated separately like everything else, so an upstream retune just leaves it
+alone.
 
 Omarchy splices `shell.*.toml` sections into the staged `shell.toml` verbatim
 and keeps keys it does not recognise, so any theme can set this and themes that

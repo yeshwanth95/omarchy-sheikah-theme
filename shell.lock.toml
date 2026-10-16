@@ -18,3 +18,16 @@ selection-alpha  = 0.45
 # field. Relative to the theme directory. Only a theme that sets this gets a
 # frame, so the patched lock screen is a no-op under every other theme.
 frame            = "assets/sheikah_frame.png"
+
+# Fade the lock screen up out of the background colour when the session locks,
+# and back down into it when it unlocks. Hyprland animates neither: there is no
+# animation leaf for a session lock, and an ext-session-lock surface is not a
+# layer surface, so no layer_rule can reach it. Without this key the lock
+# appears and disappears on a single frame, which is what every other theme
+# gets. Same channel as `frame` above -- Color.parseShell keeps keys it does
+# not recognise, so this needs no Omarchy change.
+#
+# 140ms / OutCubic is the shell's house timing. The unlock half is capped at
+# 1000ms in the QML, because that half is time the session stays locked after a
+# correct password.
+fade-duration    = 140

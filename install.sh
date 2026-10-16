@@ -155,19 +155,39 @@ install_marker_widget() {
 
 install_marker_widget
 
-# --- the lock screen frame (opt-in) ---------------------------------------
+# --- the lock screen frame and fade (opt-in) -------------------------------
 # Built from the running Omarchy's own lock plugin, never from a copy frozen
 # into this repo. Service.qml carries the PAM flow and the stranded-lock
 # recovery; shipping a stale one would be a broken lock screen on any Omarchy
-# but the exact version this theme was written against. Only LockView.qml is
-# patched, and only by inserting two blocks at anchors that are verified unique
-# first -- if upstream has moved, we bail and leave the stock lock alone.
+# but the exact version this theme was written against.
+#
+# Every edit below is anchored on a line checked to occur exactly once first,
+# and if an anchor has moved that edit does not happen. Most are inserts. Two
+# are whole-line replacements, which is a sharper tool, so each is gated by
+# itself -- see replace_line and the stages inside install_lock_frame. The
+# authentication code is never touched by any of them.
 insert_before() {
   local anchor="$1" snippet="$2" target="$3"
   awk -v anchor="$anchor" -v snippet="$snippet" '
     $0 == anchor { while ((getline line < snippet) > 0) print line; close(snippet) }
     { print }
   ' "$target" >"$target.new" && mv "$target.new" "$target"
+}
+
+# Swap one whole line for another. Unlike insert_before this changes code that
+# is already there, so the caller must have checked the line occurs exactly
+# once -- unique_line below -- before calling it.
+replace_line() {
+  local from="$1" to="$2" target="$3"
+  awk -v from="$from" -v to="$to" '
+    $0 == from { print to; next }
+    { print }
+  ' "$target" >"$target.new" && mv "$target.new" "$target"
+}
+
+# Exact whole-line occurrences of $1 in $2.
+unique_line() {
+  grep -cxF "$1" "$2" 2>/dev/null || true
 }
 
 install_lock_frame() {
@@ -197,6 +217,45 @@ install_lock_frame() {
 
   insert_before "$anchor_props"   "$LOCK_PATCH/properties.qml" "$stage/LockView.qml"
   insert_before "$anchor_overlay" "$LOCK_PATCH/overlay.qml"    "$stage/LockView.qml"
+
+  # --- the unlock fade, gated separately --------------------------------
+  # The fade-in above lives entirely in LockView.qml and rides the anchor the
+  # frame already uses. The fade-OUT cannot: WlSessionLock destroys its
+  # surfaces the instant `locked` goes false, so the release has to be held
+  # back, and the only place to do that is Service.qml -- the PAM file this
+  # installer otherwise copies untouched.
+  #
+  # So it gets its own gate rather than joining the one above. Service.qml is
+  # 551 lines of lifecycle, PAM and recovery and is far likelier to move
+  # between Omarchy releases than the view; folding it into the same check
+  # would mean a future Omarchy costing you the frame and the fade-in too.
+  # This way the worst it can cost is the unlock fade.
+  local svc_props_anchor="  function realScreenCount() {"
+  local svc_bind_anchor="        onWakeRequested: root.runWake()"
+  local svc_release_from="    sessionLock.locked = false"
+  local p b r
+  p=$(unique_line "$svc_props_anchor"  "$stage/Service.qml")
+  b=$(unique_line "$svc_bind_anchor"   "$stage/Service.qml")
+  r=$(unique_line "$svc_release_from"  "$stage/Service.qml")
+  if [[ $p == 1 && $b == 1 && $r == 1 ]]; then
+    insert_before "$svc_props_anchor" "$LOCK_PATCH/service-props.qml" "$stage/Service.qml"
+    insert_before "$svc_bind_anchor"  "$LOCK_PATCH/service-bind.qml"  "$stage/Service.qml"
+    replace_line  "$svc_release_from" "    root.releaseSessionLock()" "$stage/Service.qml"
+  else
+    say "This Omarchy's lock Service.qml is not shaped as expected ($p/$b/$r);"
+    say "installing without the unlock fade. Locking still fades in."
+  fi
+
+  # How long the lock screen waits before blanking the display. Upstream's 5s
+  # is brisk if you lock while still reading something; 10s is the local
+  # preference. Gated on its own too: if upstream retunes that timer, every
+  # other part of this install still goes in.
+  local blank_from="    interval: 5000"
+  if [[ $(unique_line "$blank_from" "$stage/Service.qml") == 1 ]]; then
+    replace_line "$blank_from" "    interval: 10000" "$stage/Service.qml"
+  else
+    say "Leaving the lock screen's blank delay at its Omarchy default."
+  fi
 
   jq --arg id "$LOCK_ID" --arg name "Sheikah Lock Screen" '
       .id = $id | .name = $name
