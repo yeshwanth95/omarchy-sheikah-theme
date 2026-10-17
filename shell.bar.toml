@@ -9,3 +9,13 @@ active           = "#ff9e45"
 scale-with-font  = true
 size-horizontal  = 26
 size-vertical    = 28
+
+# --- read by the workspaces widget, not by Omarchy -------------------------
+# The workspace numbers are drawn in the theme's own font, whose digits are
+# Sheikah numerals. The widget deliberately has no default for this: a
+# FontLoader pointed at a file that is not there warns, so a theme that wants
+# runic numerals has to say so and every other theme stays silent and keeps
+# plain digits. Relative to the theme directory.
+workspace-digit-font  = "assets/sheikah-complete.ttf"
+# Multiplies the label size. 1.0 is the bar's stock body size.
+workspace-digit-scale = 1.0

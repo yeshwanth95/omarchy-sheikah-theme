@@ -127,6 +127,54 @@ BarWidget {
       Qt.callLater(function() { root.markerCandidateIndex++ })
   }
 
+  // --------------------------------------------------------- the numerals
+  // The slots' labels are plain digits; a theme whose own font carries
+  // numerals gets those instead, by naming the file under [bar] as
+  // `workspace-digit-font`. Deliberately not defaulted here the way the marker
+  // asset is: a missing image is silent, but a FontLoader pointed at a file
+  // that is not there warns, so a hardcoded name would have every other theme
+  // logging "Cannot load font" on each apply for a file it never promised.
+  // No key means no URL, the Loader below never activates, and the slots keep
+  // the stock face. A bar entry setting still overrides, e.g.
+  //   omarchy bar set sheikah.workspaces digitScale 0.9
+  //
+  // Resolved against the staged theme directory, unlike the marker above --
+  // and for the opposite reason. That path never changes, so the asset name is
+  // the only moving part and it arrives with Color.shellValues in one step.
+  // theme.name is watched separately and lands about a third of a second
+  // later; resolving through it would pair the new theme's directory with the
+  // old theme's asset name for that long, which is a file that does not exist
+  // and a warning every time. The marker can afford that race because a failed
+  // Image says nothing. The trade is that the staged path is identical for
+  // every theme, so editing the font file in place needs a shell restart
+  // before the new glyphs appear.
+  readonly property string digitFontAsset: String(root.setting("digitFontAsset",
+    Color.shellValues["bar.workspace-digit-font"] || ""))
+  readonly property real digitScale: {
+    var n = Number(root.setting("digitScale",
+      Color.shellValues["bar.workspace-digit-scale"] || 1))
+    return isFinite(n) && n > 0 ? Math.min(3, n) : 1
+  }
+  // Relative, inside the theme directory, or not used at all.
+  readonly property bool digitFontAssetSafe: digitFontAsset !== ""
+    && digitFontAsset.charAt(0) !== "/" && digitFontAsset.indexOf("..") === -1
+  readonly property string digitFontSource: digitFontAssetSafe
+    ? Util.fileUrl(Color.currentThemePath + "/" + digitFontAsset) : ""
+
+  // Held behind a Loader rather than declared outright: a FontLoader handed an
+  // empty source warns too, so under a theme that names no font there must be
+  // no FontLoader at all.
+  Loader {
+    id: digitFontHost
+    active: root.digitFontSource !== ""
+    sourceComponent: FontLoader { source: root.digitFontSource }
+  }
+
+  readonly property bool digitFontReady: digitFontHost.item !== null
+    && digitFontHost.item.status === FontLoader.Ready
+    && String(digitFontHost.item.name || "").length > 0
+  readonly property string digitFontName: digitFontReady ? digitFontHost.item.name : ""
+
   GridLayout {
     id: grid
     anchors.fill: parent
@@ -146,6 +194,11 @@ BarWidget {
         readonly property bool occupied: workspace !== null && workspace.toplevels.values.length > 0
         readonly property bool focused: Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === modelData
         readonly property bool showMarker: focused && root.markerReady
+        // Never the focused slot: its text is the Nerd Font quest marker, kept
+        // as the fallback for when the artwork fails to load, and the theme
+        // font has no such glyph -- drawing it there would turn that fallback
+        // into tofu.
+        readonly property bool runeDigits: !focused && root.digitFontReady
 
         bar: root.bar
         // text stays set even when the marker covers it: WidgetButton derives
@@ -154,6 +207,13 @@ BarWidget {
         // traded away, and a load failure brings the glyph straight back.
         text: focused ? "\uDB85\uDCFB" : (modelData === 10 ? "0" : String(modelData))
         labelVisible: !showMarker
+        // Only the face changes -- `text` above still produces the same
+        // characters, including the 10 -> "0" mapping.
+        fontFamily: runeDigits ? root.digitFontName
+          : (root.bar ? root.bar.fontFamily : Style.font.family)
+        fontSize: runeDigits
+          ? Math.max(1, Math.round(Style.font.body * root.digitScale))
+          : Style.font.body
         opacity: occupied || focused ? 1 : 0.5
         horizontalMargin: 6
         verticalPadding: 6

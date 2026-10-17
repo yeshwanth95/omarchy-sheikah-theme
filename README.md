@@ -93,6 +93,8 @@ deliberately will not let a theme installed from a git repo supply them:
   it the built-in's slot on enable and hands the slot straight back on disable.
   It decides *at runtime* whether the active theme ships
   `assets/quest_marker.svg`, so under any other theme you get the stock dot.
+  The same widget also draws the **workspace numbers in the theme's own font**,
+  whose digits are Sheikah numerals — see below.
 
 `install.sh` will enable all three of these. Everything it changes is inside your home directory — no `sudo`, nothing under `/usr`:
 
@@ -455,6 +457,49 @@ theme directory, whose path is byte-identical for every theme, so **editing the
 `.ttf` in place needs `omarchy restart shell`** before the new glyphs appear.
 Changing the *keys* needs only a theme apply, like everything else.
 
+### Sheikah numerals in the bar
+
+The workspace numbers are drawn in `assets/sheikah-complete.ttf`, whose digits
+are runes. The focused slot is untouched — it still shows
+`assets/quest_marker.svg`. One key in `shell.bar.toml`:
+
+```toml
+workspace-digit-font  = "assets/sheikah-complete.ttf"
+workspace-digit-scale = 1.0
+```
+
+Only the *face* changes: the widget still produces the same characters,
+including its `10 → "0"` mapping, so nothing about workspace behaviour moves.
+The slots keep their fixed width, so **the bar's footprint does not shift** —
+verified by measuring the focused marker's position before and after, which
+lands on the same pixel.
+
+Two things here are deliberate and easy to get wrong:
+
+- **The font is never applied to the focused slot.** That slot's text is the
+  Nerd Font quest-marker glyph, kept as the fallback for when the artwork fails
+  to load. `Sheikah Complete` has no such glyph, so drawing it there would turn
+  that fallback into a tofu box. Gated on `!focused`.
+- **The asset is named by the theme, not defaulted in the widget**, unlike
+  `quest_marker.svg`. A failed `Image` is silent, but a `FontLoader` pointed at
+  a file that is not there warns — so a hardcoded default would make every
+  *other* theme log "Cannot load font" on each apply for a file it never
+  promised.
+
+It is also resolved against the **staged** theme directory, which is the
+opposite of what the marker does, and for a specific reason. The marker
+resolves through the watched `theme.name` file to keep Qt's pixmap cache
+honest. That file lands about a third of a second after the theme's values do,
+which is long enough to pair the new theme's directory with the old theme's
+asset name — a file that does not exist, and a warning every time. The marker
+can afford that race because a failed image says nothing; a font cannot. The
+staged path never changes, so the asset name is the only moving part and it
+arrives in one step. The trade: **editing the `.ttf` in place needs
+`omarchy restart shell`** before the new glyphs appear.
+
+A bar entry setting still overrides either value, e.g.
+`omarchy bar set sheikah.workspaces digitScale 0.9`.
+
 ## About that allowlist
 
 Re-enabling Lua re-opens a hole Omarchy closed on purpose, so the hook only
@@ -492,7 +537,7 @@ assets/            quest_marker.svg (workspace indicator), triforce.svg (menu lo
                    sheikah-complete.ttf (the lock screen's password-mask runes)
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
-shell.bar.toml     the bar, as the Slate's bezel
+shell.bar.toml     the bar, and the workspace numerals, as the Slate's bezel
 shell.lock.toml    the lock screen
 shell.menu.toml    the menu, and the active row's frame
 icons.theme        Yaru-prussiangreen-dark
