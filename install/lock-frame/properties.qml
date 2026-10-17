@@ -79,3 +79,103 @@
     onTriggered: root.revealCapped = true
   }
 
+  // ------------------------------------------------------ password mask glyph
+  // Omarchy masks the password with U+25CF (LockView sets passwordCharacter
+  // explicitly). A theme can swap that for a character out of a font it ships
+  // itself -- in Sheikah Complete the period is a rune, so the field fills
+  // with runes as you type.
+  //
+  // The font is loaded straight out of the theme directory rather than
+  // installed on the machine, which keeps it travelling with the theme and
+  // leaves nothing behind on a switch. It is also the only arrangement that
+  // can tell whether the font actually arrived: FontLoader reports a status,
+  // where a named system family is silently substituted when missing. That
+  // matters more here than anywhere else in the theme -- a "." drawn in the
+  // ordinary UI font is a mask you can barely see.
+  readonly property string runeFontAsset: String(Color.shellValues["lock.password-char-font"] || "")
+  // Relative, inside the theme directory, or not used at all -- same rule as
+  // the frame asset above.
+  readonly property bool runeFontAssetSafe: runeFontAsset !== ""
+    && runeFontAsset.charAt(0) !== "/" && runeFontAsset.indexOf("..") === -1
+  readonly property string runeFontUrl: runeFontAssetSafe
+    ? Util.fileUrl(Color.currentThemePath + "/" + runeFontAsset) : ""
+
+  // Held behind a Loader rather than declared outright: a FontLoader handed an
+  // empty source warns, and a theme that names no font would otherwise log
+  // "Cannot load font" on every apply. Inactive means no FontLoader exists at
+  // all, so every other theme stays quiet.
+  Loader {
+    id: runeFontLoader
+    active: root.runeFontAssetSafe
+    sourceComponent: FontLoader { source: root.runeFontUrl }
+  }
+
+  readonly property bool runeFontReady: runeFontLoader.item !== null
+    && runeFontLoader.item.status === FontLoader.Ready
+    && String(runeFontLoader.item.name || "").length > 0
+  readonly property string runeFontName: runeFontReady ? runeFontLoader.item.name : ""
+
+  readonly property string runeChar: String(Color.shellValues["lock.password-char"] || "")
+  readonly property real runeScale: {
+    var n = Number(Color.shellValues["lock.password-char-scale"])
+    return (isFinite(n) && n > 0) ? Math.min(3, n) : 1
+  }
+
+  // Everything below hangs off this one gate. A theme that names no character,
+  // or names a font that does not load, leaves it false -- every Binding then
+  // stands down and the field keeps the stock bullet it always had.
+  readonly property bool runeReady: runeChar.length > 0 && root.runeFontReady
+
+  // Bindings rather than edits in place: the lines that would otherwise need
+  // changing are not all uniquely anchorable -- `font.family: Style.font.family`
+  // occurs three times at the same indent -- but both objects carry ids, so
+  // they can be retargeted from here. `when` false restores the original
+  // binding, which is what makes this revert cleanly on a theme switch.
+  //
+  // dotMetrics has to move in step with the field, not be left behind:
+  // passwordDotScale is derived from its advanceWidth, and that is what
+  // shrinks the row so a long password stays visible instead of clipping.
+  // The rune is about 1.5x the bullet's advance, so leaving the metrics on the
+  // old glyph would mis-measure every password.
+  Binding {
+    target: dotMetrics
+    property: "font.family"
+    when: root.runeReady
+    value: root.runeFontName
+  }
+  Binding {
+    target: dotMetrics
+    property: "text"
+    when: root.runeReady
+    value: root.runeChar.repeat(passwordInput.text.length)
+  }
+  Binding {
+    target: dotMetrics
+    property: "font.pixelSize"
+    when: root.runeReady
+    value: Math.max(1, Math.round(root.passwordDotFontSize * root.runeScale))
+  }
+
+  Binding {
+    target: passwordInput
+    property: "passwordCharacter"
+    when: root.runeReady
+    value: root.runeChar
+  }
+  Binding {
+    target: passwordInput
+    property: "font.family"
+    when: root.runeReady
+    value: root.runeFontName
+  }
+  // Mirrors the stock expression with the theme's scale folded in; the empty
+  // field still falls back to fieldFontSize so the caret keeps its size.
+  Binding {
+    target: passwordInput
+    property: "font.pixelSize"
+    when: root.runeReady
+    value: passwordInput.text.length > 0
+      ? Math.max(1, Math.floor(root.passwordDotFontSize * root.runeScale * root.passwordDotScale))
+      : root.fieldFontSize
+  }
+

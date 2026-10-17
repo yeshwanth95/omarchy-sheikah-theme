@@ -31,3 +31,20 @@ frame            = "assets/sheikah_frame.png"
 # 1000ms in the QML, because that half is time the session stays locked after a
 # correct password.
 fade-duration    = 140
+
+# The password mask. Omarchy masks with U+25CF, a plain bullet; this swaps it
+# for the period of the theme's own font, which in Sheikah Complete is a rune,
+# so the field fills with runes as you type.
+#
+# The font ships with the theme and is loaded straight from this directory at
+# runtime -- nothing is installed on the machine and nothing is left behind
+# when you switch away. If it fails to load for any reason the field falls
+# back to the stock bullet, which matters: a period rendered in the ordinary
+# UI font would be an almost invisible mask.
+password-char       = "."
+password-char-font  = "assets/sheikah-complete.ttf"
+
+# Multiplies the mask's font size. The rune fills its whole em square where a
+# bullet's ink is only about 42% of its box, so at 1.0 it reads very dense;
+# 0.85 keeps it bold but leaves the field some air. Absent or 0 means 1.0.
+password-char-scale = 0.85

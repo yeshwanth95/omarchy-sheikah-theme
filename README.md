@@ -418,6 +418,43 @@ To undo: `./install.sh --uninstall` disables the clone (which restores
 `omarchy.lock`) before removing it. That order matters — deleting first would
 strand you with no lock plugin at all.
 
+### Runes instead of bullets
+
+Omarchy masks the password with `●`, set explicitly in `LockView.qml`. The
+theme ships its own font, and in **Sheikah Complete the period is a rune**, so
+pointing the mask at `.` fills the field with runes as you type. Three keys:
+
+```toml
+password-char       = "."
+password-char-font  = "assets/sheikah-complete.ttf"
+password-char-scale = 0.85
+```
+
+The font is **loaded out of the theme directory, not installed on your
+machine** — nothing lands in `~/.local/share/fonts`, nothing needs `fc-cache`,
+and switching themes leaves no residue. That is also the only arrangement that
+can tell whether the font actually arrived: `FontLoader` reports a status,
+where a named system family is silently substituted when it is missing. It
+matters more here than anywhere else in the theme, because **a `.` drawn in the
+ordinary UI font is a mask you can barely see.** If the font does not load, the
+field falls back to the stock bullet.
+
+`password-char-scale` exists because the rune fills its whole em square, where
+a bullet's ink is only about 42% of its box — at 1.0 the field reads very
+dense. 0.85 keeps it bold with some air.
+
+The patch is **inserts only**, like the frame. The lines that would otherwise
+need editing are not all uniquely anchorable — `font.family: Style.font.family`
+occurs three times at the same indent — but the two objects involved carry ids,
+so a handful of `Binding` elements retarget them from the block the installer
+already splices. `when: false` makes Qt restore the original bindings, which is
+what makes this vanish cleanly under any other theme.
+
+One thing to know if you swap the font file: it is resolved against the staged
+theme directory, whose path is byte-identical for every theme, so **editing the
+`.ttf` in place needs `omarchy restart shell`** before the new glyphs appear.
+Changing the *keys* needs only a theme apply, like everything else.
+
 ## About that allowlist
 
 Re-enabling Lua re-opens a hole Omarchy closed on purpose, so the hook only
@@ -451,7 +488,8 @@ colors.toml        the palette — single source of truth for everything generat
 hyprland.lua       border gradient + halo (needs install.sh on a cloned install)
 assets/            quest_marker.svg (workspace indicator), triforce.svg (menu logo),
                    sheikah_frame_art.svg (master) + sheikah_frame.png (lock frame),
-                   menu_item_active.svg (design reference for the active menu row)
+                   menu_item_active.svg (design reference for the active menu row),
+                   sheikah-complete.ttf (the lock screen's password-mask runes)
 screensaver.txt    the Sheikah eye, in braille
 about.txt          the same, for the about window
 shell.bar.toml     the bar, as the Slate's bezel
