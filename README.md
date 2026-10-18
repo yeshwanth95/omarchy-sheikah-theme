@@ -5,9 +5,9 @@ the Wild*.
 
 ![Sheikah](preview01.png)
 ![Sheikah](preview02.png)
+![Sheikah](preview05.jpg)
 ![Sheikah](preview03.png)
 ![Sheikah](preview04.png)
-![Sheikah](preview05.jpg)
 
 Every colour is sampled from `backgrounds/01-1258416.jpg`, the Sheikah tapestry.
 
