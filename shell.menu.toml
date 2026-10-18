@@ -65,3 +65,67 @@ selected-glow-blur        = 14
 open-duration             = 140
 # Scale the card starts from and returns to. 1.0 means fade with no scale.
 open-scale                = 0.87
+
+# --- patching the menu plugin ------------------------------------------------
+# Everything above this comment block is either a stock Omarchy token (the
+# fill and the outline, which need no patch at all) or an extra key read by a
+# patched Menu.qml. The patch cannot ship with the theme: the menu belongs to
+# whichever plugin owns it, `omarchy bar` has no `remove`, and
+# `omarchy plugin disable` on a menu plugin takes the menu down with it -- so
+# an installer rewriting shell.json has no business here. Clone the stock menu
+# (`omarchy plugin clone omarchy.menu`, which never touches /usr/share) and
+# edit the clone's Menu.qml. `assets/menu_item_active.svg` is the design
+# reference the numbers above came from.
+#
+# A shell restart is required afterwards, not just a save: the menu plugin is
+# keepLoaded and its widgets are not rebuilt by the usual hot reload, even
+# though the log says "Local plugin changed, reloading". Run
+# `omarchy restart shell`.
+#
+# In the row delegate, for the frame:
+#
+#   - a Loader at z: -1 holding a hidden Rectangle plus a MultiEffect with
+#     shadowEnabled and BOTH offsets at zero, so the shadow spreads evenly
+#     instead of falling to one side -- the same reasoning as the window halo
+#     in hyprland.lua;
+#   - a Repeater of four Shape items for the brackets, one path rotated
+#     0/90/270/180 about its own centre;
+#   - borderSpec on idle rows pointed at row-border instead of Border.none().
+#
+# Three things there are easy to get wrong, all of them found the hard way:
+#
+#   - Do NOT use layer.effect for the glow. MultiEffect only honours
+#     autoPaddingEnabled when it has its own `source`; as a layer effect it
+#     inherits the row's geometry and clips the halo away entirely. Routing the
+#     row through a layer also costs the border about 24% of its brightness.
+#   - ListView overwrites a delegate's x. Anchor with
+#     anchors.horizontalCenter instead, or the row slides to the clip edge and
+#     the halo is sheared off left and right.
+#   - Widen the list into the card's padding by the glow's reach and give that
+#     width back to each row, so the visible row keeps its size. Row HEIGHTS
+#     stay untouched, which is what keeps the fold maths honest.
+#
+# In the PanelWindow, for the open/close animation:
+#
+#   - a `shown` property for the LOGICAL open (opened && rowsLoaded), and
+#     `visible: shown || card.opacity > 0` so the surface outlives the logical
+#     close by the length of the shrink -- the PopupCard.qml idiom;
+#   - opacity and scale on the card, each with a Behavior gated on whether the
+#     theme asked for an animation at all. The card is a Rectangle, so its
+#     transformOrigin is Item.Center already and the layer surface is already
+#     full-screen, so scaling needs no surface resize;
+#   - keyboard focus and the input mask follow `shown`, never `visible`. An
+#     exclusive grab held through the shrink locks the keyboard out for its
+#     duration, and an app the menu just launched comes up behind a surface
+#     that still owns input. KeyboardPanel.qml has this lesson in a comment.
+#
+# Two subtler ones, both only visible once the card outlives the close:
+#
+#   - Unfreeze the card's top line on the way IN, not on the way out.
+#     Reopening mid-shrink never lowers `visible`, so a reset hung off that is
+#     skipped and the new menu inherits the last one's frozen top.
+#   - Do not clear the filter text in the close paths. It used to be invisible
+#     because the surface vanished on the same frame; now the rows and the
+#     prompt line are seen reverting to the unfiltered menu on the way out.
+#     Clear it when the surface actually unmaps -- both open paths clear it
+#     themselves anyway.

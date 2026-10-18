@@ -1,3 +1,42 @@
+<!--
+  Sheikah - the menu button's logo.
+
+  This can replace the Omarchy mark on the bar's menu button, but nothing in
+  this theme installs it: the button belongs to whichever plugin owns your
+  menu, `omarchy bar` has no `remove`, and `omarchy plugin disable` on a menu
+  plugin takes the menu down with it. Rather than have an installer perform
+  surgery on your shell.json, here is the edit.
+
+  If your menu is already a clone (~/.config/omarchy/plugins/<you>.menu/), edit
+  its BarWidget.qml. On the stock omarchy.menu, clone it first with
+  `omarchy plugin clone omarchy.menu`, which never touches /usr/share.
+
+  The asset resolution is the same shape as the quest marker's in
+  install/plugins/sheikah.workspaces/BarWidget.qml — the candidate list keyed
+  by theme name and the FileView watching theme.name — pointed at
+  assets/triforce.svg instead. Copy that, then on the button:
+
+      text: ""        // keep it: WidgetButton sizes from the hidden
+                            // label, so the button stays exactly as wide as
+                            // it was before
+      labelVisible: !root.logoReady
+
+  plus an Image centred in the button and; unlike the quest marker, a
+  MultiEffect { colorization: 1.0; colorizationColor: button.foreground } over
+  it. The marker is deliberately left untinted because its glow is three
+  differently tinted layers that colorization would flatten to one hue; the
+  triforce is flat artwork, and tinting it to bar.text is what makes it follow
+  every theme the way the glyph did.
+
+  A shell restart is required afterwards, not just a save: the menu plugin is
+  keepLoaded and its bar widget is not rebuilt by the usual hot reload, even
+  though the log says "Local plugin changed, reloading". Run
+  `omarchy restart shell`.
+
+  Theme-conditional like the rest of the theme: the resolution walk finds no
+  triforce.svg under any other theme's directory, logoReady stays false, and
+  the Omarchy mark comes back on its own.
+-->
 <svg width="53" height="47" viewBox="0 0 53 47" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_d_220_708)">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M20 21.5L12 35H28.25H44.5L36.25 21.5L28 8L20 21.5ZM20 21.5L28.25 35L36.25 21.5H20Z" fill="#E2DED3"/>

@@ -6,10 +6,14 @@
 #
 #     omarchy theme install https://github.com/<you>/omarchy-sheikah-theme.git
 #
-# That gets you the palette, the wallpapers and the ASCII art. Two things it
-# cannot get you, because Omarchy deliberately does not let an installed theme
-# supply them, are the window-border glow (Hyprland Lua) and having the
-# screensaver/about art actually applied. Run this script once to enable both.
+# That gets you the palette, the wallpapers and the colors of everything
+# Omarchy themes by itself. Three things it cannot get you, because Omarchy
+# deliberately does not let an installed theme supply them, are the
+# window-border halo (Hyprland Lua, stripped from any theme that arrived as a
+# git clone), the screensaver/about art actually being applied (those readers
+# use fixed paths and never consult the active theme), and the workspace bar
+# widget (the omarchy.* plugin namespace is reserved). Run this script once to
+# enable all three.
 #
 #     ./install.sh              enable
 #     ./install.sh --uninstall  undo
@@ -18,16 +22,28 @@
 # The lock screen is opt-in. Everything else here is cosmetic and reversible;
 # the lock screen is the one thing that, if it broke, would keep you out of
 # your own machine. It is not a reasonable side effect of installing a theme,
-# so it only happens when you ask for it by name.
+# so it only happens when you ask for it by name. Check it with
+# `omarchy-shell lock preview`, which builds the real view in an ordinary
+# layer-shell window without engaging WlSessionLock, so it cannot lock you out.
+#
+# If a lock ever does go wrong: misc:allow_session_lock_restore is on by
+# default in Omarchy, so `omarchy restart shell` from a TTY (Ctrl+Alt+F2)
+# recovers a stuck lock, and `./install.sh --uninstall` puts the stock lock
+# screen back.
 #
 # What it changes, all inside your home directory -- nothing system-wide, no
 # sudo, and nothing under /usr:
 #
-#     ~/.config/omarchy/hooks/theme-set.d/omarchy-theme-extras
+#     ~/.config/omarchy/hooks/theme-set.d/sheikah-theme-extras
+#     ~/.config/omarchy/theme-extras.allow            (adds `sheikah`)
+#     ~/.config/omarchy/plugins/sheikah.workspaces/   (the bar widget)
+#     ~/.config/omarchy/plugins/sheikah.lock/         (--with-lock only)
 #
-# That one hook is theme-agnostic. It stays out of the way of themes that ship
-# none of these files, and it keeps working if you later install other themes
-# that do.
+# The hook runs on every theme change from then on, and is theme-agnostic: it
+# stays out of the way of themes that ship none of these files, it keeps
+# working if you later install other themes that do, and when you switch to a
+# theme with no ASCII art it restores Omarchy's own rather than stranding the
+# Sheikah eye.
 
 set -euo pipefail
 
@@ -101,7 +117,12 @@ say "Installed hook  → $HOOK_DEST"
 # Vouch for this theme's Lua. Omarchy denies Lua from installed themes because
 # it is executable code; the allowlist re-enables it for this theme only, and
 # running this script is what counts as consent. Other installed themes stay
-# denied.
+# denied -- installing a second themed repo does not get its Lua executed just
+# because this hook exists.
+#
+# If you would rather read before you trust, hyprland.lua is the whole of it:
+# two border colors, two halo colors and a decoration.shadow block. It can be
+# applied by hand instead of running this script.
 ALLOWLIST="$HOME/.config/omarchy/theme-extras.allow"
 if [[ -f $ALLOWLIST ]] && grep -qxF -- "$THEME_NAME" "$ALLOWLIST"; then
   say "Already allowlisted for Lua ($THEME_NAME)"

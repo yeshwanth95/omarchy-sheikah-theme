@@ -48,3 +48,21 @@ bright_green = "#82edc2"
 bright_cyan = "#bddcff"
 bright_blue = "#5ca6fa"
 bright_magenta = "#ce9bf5"
+
+# --- changing the palette ----------------------------------------------------
+# Edit this file and re-apply the theme. Two things do not follow along by
+# themselves:
+#
+#   - hyprland.lua repeats its colors as literal hex, because a theme-supplied
+#     .lua is not a .tpl and gets no {{ }} substitution. Change both.
+#   - shell.bar.toml, shell.lock.toml and shell.menu.toml replace their whole
+#     sections and are applied after templating, so they take literal hex too.
+#
+# alacritty.toml, foot.ini, neovim.lua and vscode.json are intentionally absent
+# from this theme: Omarchy generates them from this file through its own
+# templates, so shipping them would only let them drift from the palette.
+#
+# `cyan` is kept a visibly paler rung than `blue` on purpose. dircolors paints
+# directories 01;34 and symlinks 01;36, and neither foot nor alacritty maps
+# bold to bright -- if those two collapse, `ls` stops distinguishing a symlink
+# from a directory.

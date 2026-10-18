@@ -14,6 +14,15 @@ border-alpha     = 1.0
 selection        = "#258af5"
 selection-alpha  = 0.45
 
+# --- read by the patched lock plugin, not by Omarchy -------------------------
+# The three features below (frame, fade, rune mask) need a patched lock screen,
+# which `./install.sh --with-lock` builds by cloning the running Omarchy's own
+# lock plugin and splicing in install/lock-frame/*.qml. Omarchy has no tokens
+# for any of these keys; Color.parseShell keeps keys it does not recognise, so
+# they ride along in Color.shellValues and need no Omarchy change. Under an
+# unpatched lock screen they are simply ignored, and under any other theme the
+# patched one reverts to the stock lock with no restart.
+
 # The Slate's bezel, drawn over the blurred wallpaper and under the passphrase
 # field. Relative to the theme directory. Only a theme that sets this gets a
 # frame, so the patched lock screen is a no-op under every other theme.
