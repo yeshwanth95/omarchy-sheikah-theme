@@ -7,6 +7,7 @@ the Wild*.
 ![Sheikah](preview02.png)
 ![Sheikah](preview03.png)
 ![Sheikah](preview04.png)
+![Sheikah](preview05.png)
 
 Every colour is sampled from `backgrounds/01-1258416.jpg`, the Sheikah tapestry.
 
@@ -198,21 +199,3 @@ lives:
 | `assets/triforce.svg` | how to put the triforce on the menu button |
 | `assets/sheikah_frame_art.svg` | how to rebuild the baked lock frame |
 
-<!-- ## Support -->
-<!---->
-<!-- Entirely optional — the theme is free and works exactly the same either way. -->
-<!-- If it brightened your desktop and you would like to say thanks: -->
-<!---->
-<!-- - ⭐ **Star the repo** — costs nothing, and it is how other people find it. -->
-<!-- - ☕ **Buy me a coffee** — https://buymeacoffee.com/\<handle\> -->
-<!-- - 💙 **GitHub Sponsors** — https://github.com/sponsors/yeshwanth95 -->
-<!-- - 🪙 **Ko-fi** — https://ko-fi.com/\<handle\> -->
-<!---->
-<!-- <!-- -->
-<!--   Template. Replace <handle> with yours, drop the lines you do not use, and -->
-<!--   delete this comment. GitHub Sponsors needs enabling on the account first -->
-<!--   (github.com/sponsors); a FUNDING.yml in .github/ adds the Sponsor button to -->
-<!--   the repo page. -->
-<!-- --> -->
-<!---->
-<!-- Bug reports and wallpaper suggestions are just as welcome as anything above. -->
