@@ -3,7 +3,10 @@
 An Omarchy theme based on the aesthetic of the Sheikah Slate from *The Legend of Zelda: Breath of
 the Wild*.
 
-![Sheikah](preview.png)
+![Sheikah](preview01.png)
+![Sheikah](preview02.png)
+![Sheikah](preview03.png)
+![Sheikah](preview04.png)
 
 Theme colors are sampled from `backgrounds/01-1258416.jpg`, the Sheikah tapestry.
 
